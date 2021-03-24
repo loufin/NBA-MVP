@@ -42,6 +42,7 @@ team_win_percent.df$SDC <- team_win_percent.df$LAC
 team_win_percent.df$KCK <- team_win_percent.df$SAC
 
 row_count <-c()
+
 # some players have multiple teams, and are listed as TOT -> need to find the second team they played for players_tot <- c()
 player_data.df <- read.csv("nba-data-historical.csv")
 for(i in 1:length(voting.df$Tm)){
@@ -82,4 +83,60 @@ for(i in 1:length(voting.df$PlayerID)){
   voting.df$winPct[i] <- team_win_percent.df[row, col]
 }
 
-# add in percent of games played to each player 
+# add in percent of games played for each player 
+i = 0
+for(i in 1:length(voting.df$PlayerID)){
+  year <- grep(voting.df$Year[i], team_wins.df$Season)
+  voting.df$pctGamesPlayed[i] <- (voting.df$G[i])/team_wins.df$TotalGames[year]
+  
+  # because of COVID, teams had a variable amount of games played in the year 2020
+  # so some players played more games than other players, meaning they played over 100% of games
+  # so we need to adjust by just setting the percent of games played to 100% 
+  if(voting.df$pctGamesPlayed[i] > 1) voting.df$pctGamesPlayed[i] <- 1 
+}
+
+# LETS ADD EVEN MORE DATA, THROW THE KITCHEN SINK AT THE PROBLEM 
+# We can always, and will, take it out later 
+# we're going to be adding in a bunch of advanced analytic metrics 
+for( i in 1:length(voting.df$PlayerID)){
+  
+  # Grab every season of a player's career, store rows in a vector
+  player_rows <- grep(voting.df$PlayerID[i], player_data.df$player_id)
+  
+  # iterate through every season of a player
+  for( j in 1:length(player_rows)){
+    
+    # if they years match up, and it is regular season statistics 
+    if ((player_data.df$year_id[player_rows[j]] == voting.df$Year[i]) && (player_data.df$type[player_rows[j]] == "RS") )
+    {
+      voting.df$TS[i] <- player_data.df$TS.[player_rows[j]]
+      voting.df$raptorO[i] <- player_data.df$Raptor.O[player_rows[j]]
+      voting.df$raptorD[i] <- player_data.df$Raptor.D[player_rows[j]]
+      voting.df$raptorPM[i] <- player_data.df$Raptor...[player_rows[j]]
+      voting.df$raptorWAR[i] <- player_data.df$Raptor.WAR[player_rows[j]]
+      voting.df$USG[i] <- player_data.df$USG.[player_rows[j]]
+    }
+  }
+}
+
+#let's create a winners df 
+winners.df <- data.frame(matrix(0, ncol = length(colnames(voting.df))))
+colnames(winners.df)<- colnames(voting.df)
+winners.df <- winners.df[-c(1),]
+
+losers.df <- data.frame(matrix(0, ncol = length(colnames(voting.df))))
+colnames(losers.df)<- colnames(voting.df)
+losers.df <- losers.df[-c(1),]
+
+
+# add rows from original df to this df 
+for(i in 1:length(voting.df$PlayerID)){
+  if(voting.df$Rank[i] == 1) {winners.df <- rbind(winners.df, voting.df[i,]) }
+  else {losers.df <- rbind(losers.df, voting.df[i,])}
+}
+
+# want to export data now to look at with a visualizing tool
+# I will use PowerBI 
+write.csv(winners.df,"ExportedDataFrames\\winners.csv", row.names = FALSE)
+write.csv(losers.df,"ExportedDataFrames\\losers.csv", row.names = FALSE)
+write.csv(voting.df,"ExportedDataFrames\\total.csv", row.names = FALSE)
