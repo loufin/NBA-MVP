@@ -1,13 +1,13 @@
 voting.df <- read.csv("mvp_voting.csv")
 
 # split the Player column to two columns, their full name and Basketballreference playerID 
-for (i in 1:length(voting.df$Player)){
-  a <- unlist(strsplit(voting.df$Player[i], ".", fixed = TRUE))
-  voting.df$Name[i] = a[1]
-  voting.df$PlayerID[i] = a[2]
+for (player_index in 1:length(voting.df$Player)){
+  a <- unlist(strsplit(voting.df$Player[player_index], ".", fixed = TRUE))
+  voting.df$Name[player_index] = a[1]
+  voting.df$PlayerID[player_index] = a[2]
 }
 
-#now remove the Player column 
+#now remove the Player column, it is now unnecessary 
 voting.df <- voting.df[,-c(2)]
 
 # now we have a baseline 
@@ -15,16 +15,15 @@ voting.df <- voting.df[,-c(2)]
 team_wins.df <- read.csv("nba_season_franchise_wins.csv")
 
 team_win_percent.df <- team_wins.df
-
 # need to convert original df to win % 
 
 # iterate through each of the rows 
-for( i in 1:length(team_win_percent.df$TotalGames)){
-  totalGames <- team_win_percent.df$TotalGames[i]
+for(season in 1:length(team_win_percent.df$TotalGames)){
+  totalGames <- team_win_percent.df$TotalGames[season]
   
   #iterate through each of the team columns 
-  for(j in 4:34){
-    team_win_percent.df[i,j] <- team_win_percent.df[i,j]/totalGames
+  for(team in 4:34){
+    team_win_percent.df[season,team] <- team_win_percent.df[season,team]/totalGames
   }
 }
 
@@ -119,24 +118,51 @@ for( i in 1:length(voting.df$PlayerID)){
   }
 }
 
+# add in a binary win column called MVP 
+voting.df$MVP <- voting.df$Rank
+voting.df$MVP[voting.df$MVP>1] <- 0
+
+#Need to rearrange columns in order to have a more usefil dataframe to look at 
+#  new order 21,22, 20,1,31,4,5,6,7,2,3,8,23,24,9,10:19,25:30
+voting.df <-voting.df[,c(21,22, 20,1,31,4,5,6,7,2,3,8,23,24,9,10:19,25:30)]
 #let's create a winners df 
 winners.df <- data.frame(matrix(0, ncol = length(colnames(voting.df))))
 colnames(winners.df)<- colnames(voting.df)
 winners.df <- winners.df[-c(1),]
 
+#let's create a losers df
 losers.df <- data.frame(matrix(0, ncol = length(colnames(voting.df))))
 colnames(losers.df)<- colnames(voting.df)
 losers.df <- losers.df[-c(1),]
 
-
 # add rows from original df to this df 
 for(i in 1:length(voting.df$PlayerID)){
-  if(voting.df$Rank[i] == 1) {winners.df <- rbind(winners.df, voting.df[i,]) }
-  else {losers.df <- rbind(losers.df, voting.df[i,])}
+  if(voting.df$Rank[i] == 1) {
+    winners.df <- rbind(winners.df, voting.df[i,]) 
+    }
+  else {
+    losers.df <- rbind(losers.df, voting.df[i,])
+  }
 }
 
 # want to export data now to look at with a visualizing tool
 # I will use PowerBI 
+voting.num.df <- voting.df[,c(4,5,9,10,13:31)]
+
+library(gplots)
+# heatmap with values 
+heatmap.2(cor(voting.num.df), Rowv = FALSE, Colv = FALSE, dendrogram = "none", 
+          cellnote = round(cor(voting.num.df),2), 
+          notecol = "black", key = FALSE, trace = 'none', margins = c(10,10))
+
+x <- colnames(voting.num.df)
+y <- x
+data <- expand.grid(X=x, Y=y)
+data$Z <- runif(529, 0, 5)
+library(ggplot2)
+ggplot(data, aes(X, Y, fill= Z)) + 
+  geom_tile()
+
 write.csv(winners.df,"ExportedDataFrames\\winners.csv", row.names = FALSE)
 write.csv(losers.df,"ExportedDataFrames\\losers.csv", row.names = FALSE)
 write.csv(voting.df,"ExportedDataFrames\\total.csv", row.names = FALSE)
