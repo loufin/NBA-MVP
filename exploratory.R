@@ -124,7 +124,7 @@ voting.df$MVP[voting.df$MVP>1] <- 0
 
 #Need to rearrange columns in order to have a more usefil dataframe to look at 
 #  new order 21,22, 20,1,31,4,5,6,7,2,3,8,23,24,9,10:19,25:30
-voting.df <-voting.df[,c(21,22, 20,1,31,4,5,6,7,2,3,8,23,24,9,10:19,25:30)]
+voting.df <-voting.df[,c(21,22,20,3,2,8,23,24,9,10:19,25:28,30,1,4,5,6,7,31)]
 #let's create a winners df 
 winners.df <- data.frame(matrix(0, ncol = length(colnames(voting.df))))
 colnames(winners.df)<- colnames(voting.df)
@@ -147,7 +147,7 @@ for(i in 1:length(voting.df$PlayerID)){
 
 # want to export data now to look at with a visualizing tool
 # I will use PowerBI 
-voting.num.df <- voting.df[,c(4,5,9,10,13:31)]
+voting.num.df <- voting.df[,-c(1:5)]
 
 library(gplots)
 # heatmap with values 
