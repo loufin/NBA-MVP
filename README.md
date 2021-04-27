@@ -7,3 +7,5 @@ https://www.basketball-reference.com/awards/
 NBA Season stats for players also taken from 
 https://www.kaggle.com/drgilermo/nba-players-stats?select=player_data.csv
 
+historical stats 
+https://github.com/fivethirtyeight/nba-player-advanced-metrics/blob/master/nba-data-historical.csv
