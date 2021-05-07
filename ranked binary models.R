@@ -348,6 +348,11 @@ for( i in 1:length(winners.readable.df$Year)){
 ##########################################################
 # Evaluate all methods 
 #########################################################
+library(plotROC)
+rocplot <- ggplot(logit.results.df, aes(m = log_reg, d = Actual))+ geom_roc(n.cuts=20,labels=FALSE)
+rocplot + style_roc(theme = theme_grey) + geom_rocci(fill="pink") 
+
+
 # plot ROC curves 
 library(pROC)
 roc(logit.results.df$Actual, logit.results.df$log_reg, plot=TRUE, 
@@ -358,6 +363,19 @@ plot.roc(forward.results.df$Actual, forward.results.df$log_reg,
          col = "dark green", print.auc=TRUE, add= TRUE,print.auc.y=.55,print.auc.x=.55)
 plot.roc(both.results.df$Actual, both.results.df$log_reg, 
          col = "orange", print.auc=TRUE, add= TRUE,print.auc.y=.6,print.auc.x=.60)
-legend("bottomright", legend=c("Base Logit","Forward", "Backward", "Both"), 
-       col=c("blue", "red","dark green", "orange"), lwd=4)
+plot.roc(rf.results.df$Actual, rf.results.df$rf_prob, 
+         col = "purple", print.auc=TRUE, add= TRUE,print.auc.y=.6,print.auc.x=.60)
+legend("bottomright", legend=c("Base Logit","Forward", "Backward", "Both","RF"), 
+       col=c("blue", "red","dark green", "orange","purple"), lwd=4)
 grid()
+
+#####################
+# Model breakdown 
+###################
+model.breakdown <- data.frame(matrix(0, nrow = length(colnames(logit.reg$model))))
+model.breakdown <- model.breakdown[,-c(1)]
+model.breakdown$variables <- colnames(logit.reg$model)
+model.breakdown$base.weights <- logit.reg$coefficients
+back.glm
+forward.glm
+both.glm
