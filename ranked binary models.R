@@ -1,0 +1,363 @@
+################################################
+# Logit function to predict based on year 
+###############################################
+library(tidyverse)
+logit_predict_separate_years <- function(model, year_index, df){
+  
+  results.df <- data.frame(row.names = seq(1,length(df$PlayerID),1))
+  for(season in year_index){
+    # create a temporary dataframe to hold all players in a single year
+    temp.df <- data.frame(matrix(0, ncol = length(colnames(df))))
+    
+    # assign all years to be the same 
+    colnames(temp.df)<- colnames(df)
+    
+    # remove first row, because it is populated by default 
+    temp.df <- temp.df[-c(1),]
+    #print(season)
+    
+    # this loop will add in all plauer seasons who's years match
+    for(index in 1:length(df$Name)){
+      
+      if(df$Year[index] == season){
+        # add that datapoint into the temporary df if the years match 
+        temp.df <- rbind(temp.df, df[index,]) 
+      }
+    }
+    # based on out logit model, predict the year 
+    temp.pred <- predict(model, temp.df, type = "response")
+    
+    # create temporary dataframe with all the players from the temp df
+    # will be adding in their name, whether they made MVP, or if they 
+    temp.results.df <- data.frame(row.names = seq(1,length(temp.pred),1))
+    temp.results.df$Name <- temp.df$Name 
+    temp.results.df$Year <- temp.df$Year
+    temp.results.df$Actual <- temp.df$MVP
+    temp.results.df$log_reg <- temp.pred # add in prediction probability 
+    temp.results.df <- temp.results.df[order(temp.results.df$log_reg, decreasing = TRUE),]
+    temp.results.df$log_reg_pred <- 0
+    temp.results.df$log_reg_pred[1] <- 1 
+    
+    results.df <- rbind(results.df, temp.results.df)
+    
+    remove(temp.results.df)
+    remove(temp.df)
+  }
+  return(results.df)
+}
+
+###################################################
+# Random forest function to predict based on year 
+##################################################
+rf_predict_separate_years <- function(model, year_index, df){
+  
+  results.df <- data.frame(row.names = seq(1,length(df$PlayerID),1))
+  for(season in year_index){
+    # create a temporary dataframe to hold all players in a single year
+    temp.df <- data.frame(matrix(0, ncol = length(colnames(df))))
+    
+    # assign all years to be the same 
+    colnames(temp.df)<- colnames(df)
+    
+    # remove first row, because it is populated by default 
+    temp.df <- temp.df[-c(1),]
+    #print(season)
+    
+    # this loop will add in all plauer seasons who's years match
+    for(index in 1:length(df$Name)){
+      
+      if(df$Year[index] == season){
+        # add that datapoint into the temporary df if the years match 
+        temp.df <- rbind(temp.df, df[index,]) 
+      }
+    }
+    # based on out logit model, predict the year 
+    temp.pred <- predict(model, temp.df, type = "prob")
+    
+    # create temporary dataframe with all the players from the temp df
+    # will be adding in their name, whether they made MVP, or if they 
+    temp.results.df <- data.frame(row.names = seq(1,length(temp.pred[,2]),1))
+    temp.results.df$Name <- temp.df$Name 
+    temp.results.df$Year <- temp.df$Year
+    temp.results.df$Actual <- temp.df$MVP
+    temp.results.df$rf_prob <- temp.pred[,2] # add in prediction probability 
+    temp.results.df <- temp.results.df[order(temp.results.df$rf_prob, decreasing = TRUE),]
+    temp.results.df$rf_pred <- 0
+    temp.results.df$rf_pred[1] <- 1 
+    
+    results.df <- rbind(results.df, temp.results.df)
+    
+    remove(temp.results.df)
+    remove(temp.df)
+  }
+  return(results.df)
+}
+
+################################################################
+# Logit Create df with readable output for results 
+##################################################################
+logit_readable_output <- function(df){
+  cols <- c("Year", "Winner", "Winner.Score", "Pred.Winner", "Pred.Winner.Score")
+  
+  winner_eval.df <- data.frame(matrix(0, ncol = length(cols), nrow = length(unique(df$Year))))
+  data.frame()
+  # assign all years to be the same 
+  colnames(winner_eval.df)<- cols
+  
+  years <- unique(df$Year)
+  
+  i = 1
+  for(year in years){
+    #print(year)
+    
+    # find row with the year matching the loop and it is the winner 
+    winner_row <- df[which(df$Year == year & df$Actual == 1),] 
+    #print(winner_row)
+    # find row with the year matching the loop and it is the predicted winner 
+    
+    pred_winner_row <- df[which(df$Year == year & df$log_reg_pred == 1),] 
+    #print(pred_winner_row)
+    #print(winner_eval.df)
+    winner_eval.df$Year[i] <- year
+    winner_eval.df$Winner[i] <- winner_row$Name[1]
+    winner_eval.df$Winner.Score[i] <- winner_row$log_reg[1]
+    winner_eval.df$Pred.Winner[i] <- pred_winner_row$Name[1]
+    winner_eval.df$Pred.Winner.Score[i] <- pred_winner_row$log_reg[1]
+    #print("here")
+    i = i + 1 
+  }
+  
+  sort(winner_eval.df$Year)
+  return(winner_eval.df)
+  
+}
+
+################################################################
+# RF Create df with readable output for results 
+##################################################################
+rf_readable_output <- function(df){
+  cols <- c("Year", "Winner", "Winner.Score", "Pred.Winner", "Pred.Winner.Score")
+  
+  winner_eval.df <- data.frame(matrix(0, ncol = length(cols), nrow = length(unique(df$Year))))
+  data.frame()
+  # assign all years to be the same 
+  colnames(winner_eval.df)<- cols
+  
+  years <- unique(df$Year)
+  
+  i = 1
+  for(year in years){
+    #print(year)
+    
+    # find row with the year matching the loop and it is the winner 
+    winner_row <- df[which(df$Year == year & df$Actual == 1),] 
+    #print(winner_row)
+    # find row with the year matching the loop and it is the predicted winner 
+    
+    pred_winner_row <- df[which(df$Year == year & df$rf_pred == 1),] 
+    #print(pred_winner_row)
+    #print(winner_eval.df)
+    winner_eval.df$Year[i] <- year
+    winner_eval.df$Winner[i] <- winner_row$Name[1]
+    winner_eval.df$Winner.Score[i] <- winner_row$rf_prob[1]
+    winner_eval.df$Pred.Winner[i] <- pred_winner_row$Name[1]
+    winner_eval.df$Pred.Winner.Score[i] <- pred_winner_row$rf_prob[1]
+    #print("here")
+    i = i + 1 
+  }
+  
+  sort(winner_eval.df$Year)
+  return(winner_eval.df)
+  
+}
+
+###########################################################
+# Split Train test 
+############################################################
+voting.df <- read.csv("ExportedDataFrames\\total.csv")
+
+voting.org.df <- voting.df 
+voting.df[is.na(voting.df)] <- 0
+voting.df$MVP <- as.factor(voting.df$MVP)
+
+# create a dataframe where the only predictive value is MVP binary 
+voting.df <- voting.df[,-c(25:29)]
+
+#create sequence of all the possible years 
+year <- seq(1980, 2020, 1)
+
+# create train.validation index of 90/10 
+year.train.index <- sample(year, 0.9*length(year))
+year.valid.index <- setdiff(year, year.train.index)
+
+# create empty train df with the columns of the original df 
+train.df <- data.frame(matrix(0, ncol = length(colnames(voting.df))))
+colnames(train.df)<- colnames(voting.df)
+train.df <- train.df[-c(1),]
+
+# create empty test df with the columns of the original df 
+valid.df <- data.frame(matrix(0, ncol = length(colnames(voting.df))))
+colnames(valid.df)<- colnames(voting.df)
+valid.df <- valid.df[-c(1),]
+
+# add in each row to the training or validation df depending on the year 
+for(i in 1:length(voting.df$PlayerID)){
+  # check if the year is a training or a validation year 
+  if( voting.df$Year[i] %in% year.train.index ) {
+    # add to train df 
+    train.df <- rbind(train.df, voting.df[i,]) 
+  }
+  else {
+    # add to validation df 
+    valid.df <- rbind(valid.df, voting.df[i,])
+  }
+}
+# now we have our training and testing dfs 
+
+##########################################################
+# model building time 
+#######################################################
+# logistic regression model to predict for variable MVP 
+logit.reg <- glm(MVP ~ Age + G + winPct + pctGamesPlayed + MP +
+                   PTS + TRB + AST + STL + BLK + FG. +
+                   X3P. + FT. + WS + WS.48 + TS + raptorO +
+                   raptorD + raptorPM + USG, data = train.df, family = "binomial") 
+options(scipen=999)
+summary(logit.reg)
+
+valid.results.df <- logit_predict_separate_years(logit.reg, year.valid.index, valid.df)
+
+library(caret)
+confusionMatrix(as.factor(valid.results.df$log_reg_pred), as.factor(valid.results.df$Actual))
+valid.results.readable.df <- logit_readable_output(valid.results.df)
+
+train.results.df <- logit_predict_separate_years(logit.reg, year.train.index, train.df)
+confusionMatrix(as.factor(train.results.df$log_reg_pred), as.factor(train.results.df$Actual))
+
+train.results.readable.df <- logit_readable_output(train.results.df)
+
+logit.results.df <- rbind(valid.results.df, train.results.df)
+logit.readable.df <- rbind(valid.results.readable.df, train.results.readable.df)
+###############################################
+# Stepwise Logit Model
+###############################################
+# BACKWARDS
+back.glm <- step(logit.reg, direction = "backward")
+summary(back.glm)  # Which variables were dropped?
+back.valid.results.df <- logit_predict_separate_years(back.glm, year.valid.index, valid.df)
+confusionMatrix(as.factor(back.valid.results.df$log_reg_pred), as.factor(back.valid.results.df$Actual))
+valid.back.readable.df <- logit_readable_output(back.valid.results.df)
+print(valid.back.readable.df)
+
+back.train.results.df <- logit_predict_separate_years(back.glm, year.train.index, train.df)
+train.back.readable.df <- logit_readable_output(back.train.results.df)
+
+back.results.df <- rbind(back.valid.results.df, back.train.results.df)
+back.readable.df <- rbind(valid.back.readable.df, train.back.readable.df)
+# FORWARD 
+# create model with no predictors
+null.glm <- glm(MVP~1, data = train.df, family = "binomial")
+forward.glm <- step(null.glm, scope=list(lower=null.glm, upper=logit.reg), direction = "forward")
+summary(forward.glm)  # Which variables were added?
+forward.valid.results.df <- logit_predict_separate_years(forward.glm, year.valid.index, valid.df)
+confusionMatrix(as.factor(forward.valid.results.df$log_reg_pred), as.factor(forward.valid.results.df$Actual))
+valid.forward.readable.df <- logit_readable_output(forward.valid.results.df)
+print(valid.forward.readable.df)
+
+forward.train.results.df <- logit_predict_separate_years(forward.glm, year.train.index, train.df)
+train.forward.readable.df <- logit_readable_output(forward.train.results.df)
+
+forward.results.df <- rbind(forward.valid.results.df, forward.train.results.df)
+forward.readable.df <- rbind(valid.forward.readable.df, train.forward.readable.df)
+
+#BOTH 
+both.glm <- step(logit.reg, direction = "both")
+summary(both.glm)  # Which variables were dropped/added?
+both.valid.results.df <- logit_predict_separate_years(both.glm, year.valid.index, valid.df)
+confusionMatrix(as.factor(both.valid.results.df$log_reg_pred), as.factor(both.valid.results.df$Actual))
+valid.both.readable.df <- logit_readable_output(both.valid.results.df)
+print(valid.both.readable.df)
+
+both.train.results.df <- logit_predict_separate_years(both.glm, year.train.index, train.df)
+train.both.readable.df <- logit_readable_output(both.train.results.df)
+
+both.results.df <- rbind(both.valid.results.df, both.train.results.df)
+both.readable.df <- rbind(valid.both.readable.df, train.both.readable.df)
+########################################################
+# Random Forest 
+#####################################################
+library(randomForest)
+
+rf <- randomForest(MVP ~ Age + G + winPct + pctGamesPlayed + MP +
+                     PTS + TRB + AST + STL + BLK + FG. +
+                     X3P. + FT. + WS + WS.48 + TS + raptorO +
+                     raptorD + raptorPM + USG, data = train.df)
+rf.results.df <- rf_predict_separate_years(rf, year.valid.index, valid.df)
+rf.valid.readable.df <- rf_readable_output(rf.results.df)
+confusionMatrix(as.factor(rf.results.df$rf_pred), as.factor(rf.results.df$Actual))
+
+######################################################
+# Aggregate all the different results 
+#######################################################
+# bind results together 
+
+winners.readable.df <- data.frame(matrix(0, nrow = length(year)))
+winners.readable.df$Year <- logit.readable.df$Year
+winners.readable.df$Winner <- logit.readable.df$Winner
+
+winners.readable.df$Base.Pred.Winner <- logit.readable.df$Pred.Winner
+winners.readable.df$Back.Pred.Winner <- back.readable.df$Pred.Winner
+winners.readable.df$Forward.Pred.Winner <- forward.readable.df$Pred.Winner
+winners.readable.df$Both.Pred.Winner <- both.readable.df$Pred.Winner
+
+winners.readable.df$Base.Winner.Score <- logit.readable.df$Winner.Score
+winners.readable.df$Base.Pred.Scor <- logit.readable.df$Pred.Winner.Score
+
+winners.readable.df$Back.Winner.Score <- back.readable.df$Winner.Score
+winners.readable.df$Back.Pred.Scor <- back.readable.df$Pred.Winner.Score
+
+winners.readable.df$Forward.Winner.Score <- forward.readable.df$Winner.Score
+winners.readable.df$Forward.Pred.Scor <- forward.readable.df$Pred.Winner.Score
+
+winners.readable.df$Both.Winner.Score <- both.readable.df$Winner.Score
+winners.readable.df$Both.Pred.Scor <- both.readable.df$Pred.Winner.Score
+
+winners.readable.df <- winners.readable.df[,-c(1)]
+
+winners.diff.df <- winners.readable.df[0,]
+for( i in 1:length(winners.readable.df$Year)){
+  if(winners.readable.df$Winner[i] != winners.readable.df$Base.Pred.Winner[i]){
+    winners.diff.df <- rbind(winners.diff.df, winners.readable.df[i,])
+  }
+  else if(winners.readable.df$Winner[i] != winners.readable.df$Back.Pred.Winner[i]){
+    winners.diff.df <- rbind(winners.diff.df, winners.readable.df[i,])
+  }
+  else if(winners.readable.df$Winner[i] != winners.readable.df$Forward.Pred.Winner[i]){
+    winners.diff.df <- rbind(winners.diff.df, winners.readable.df[i,])
+  }
+  else if(winners.readable.df$Winner[i] != winners.readable.df$Both.Pred.Winner[i]){
+    winners.diff.df <- rbind(winners.diff.df, winners.readable.df[i,])
+  }
+  else{
+    
+  }
+    
+}
+#total.results.df$year <-
+
+##########################################################
+# Evaluate all methods 
+#########################################################
+# plot ROC curves 
+library(pROC)
+roc(logit.results.df$Actual, logit.results.df$log_reg, plot=TRUE, 
+    col = "blue", print.auc=TRUE)
+plot.roc(back.results.df$Actual, back.results.df$log_reg, 
+         col = "red", print.auc=TRUE, add= TRUE,print.auc.y=.45,print.auc.x=.45)
+plot.roc(forward.results.df$Actual, forward.results.df$log_reg, 
+         col = "dark green", print.auc=TRUE, add= TRUE,print.auc.y=.55,print.auc.x=.55)
+plot.roc(both.results.df$Actual, both.results.df$log_reg, 
+         col = "orange", print.auc=TRUE, add= TRUE,print.auc.y=.6,print.auc.x=.60)
+legend("bottomright", legend=c("Base Logit","Forward", "Backward", "Both"), 
+       col=c("blue", "red","dark green", "orange"), lwd=4)
+grid()
