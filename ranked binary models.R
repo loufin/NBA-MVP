@@ -237,6 +237,7 @@ confusionMatrix(as.factor(train.results.df$log_reg_pred), as.factor(train.result
 train.results.readable.df <- logit_readable_output(train.results.df)
 
 logit.results.df <- rbind(valid.results.df, train.results.df)
+confusionMatrix(as.factor(logit.results.df$log_reg_pred), as.factor(logit.results.df$Actual))
 logit.readable.df <- rbind(valid.results.readable.df, train.results.readable.df)
 ###############################################
 # Stepwise Logit Model
@@ -253,6 +254,7 @@ back.train.results.df <- logit_predict_separate_years(back.glm, year.train.index
 train.back.readable.df <- logit_readable_output(back.train.results.df)
 
 back.results.df <- rbind(back.valid.results.df, back.train.results.df)
+confusionMatrix(as.factor(back.results.df$log_reg_pred), as.factor(back.results.df$Actual))
 back.readable.df <- rbind(valid.back.readable.df, train.back.readable.df)
 # FORWARD 
 # create model with no predictors
@@ -268,6 +270,7 @@ forward.train.results.df <- logit_predict_separate_years(forward.glm, year.train
 train.forward.readable.df <- logit_readable_output(forward.train.results.df)
 
 forward.results.df <- rbind(forward.valid.results.df, forward.train.results.df)
+confusionMatrix(as.factor(forward.results.df$log_reg_pred), as.factor(forward.results.df$Actual))
 forward.readable.df <- rbind(valid.forward.readable.df, train.forward.readable.df)
 
 #BOTH 
@@ -282,6 +285,7 @@ both.train.results.df <- logit_predict_separate_years(both.glm, year.train.index
 train.both.readable.df <- logit_readable_output(both.train.results.df)
 
 both.results.df <- rbind(both.valid.results.df, both.train.results.df)
+confusionMatrix(as.factor(both.results.df$log_reg_pred), as.factor(both.results.df$Actual))
 both.readable.df <- rbind(valid.both.readable.df, train.both.readable.df)
 ########################################################
 # Random Forest 
@@ -376,6 +380,42 @@ model.breakdown <- data.frame(matrix(0, nrow = length(colnames(logit.reg$model))
 model.breakdown <- model.breakdown[,-c(1)]
 model.breakdown$variables <- colnames(logit.reg$model)
 model.breakdown$base.weights <- logit.reg$coefficients
-back.glm
-forward.glm
-both.glm
+write.csv(model.breakdown,"ExportedDataFrames\\temp.csv", row.names = FALSE)
+
+model.breakdown2 <- data.frame(matrix(0, nrow = length(colnames(back.glm$model))))
+model.breakdown2 <- model.breakdown2[,-c(1)]
+model.breakdown2$back.variables <- colnames(back.glm$model)
+model.breakdown2$back.weights <- back.glm$coefficients
+write.csv(model.breakdown2,"ExportedDataFrames\\temp.csv", row.names = FALSE)
+
+model.breakdown3 <- data.frame(matrix(0, nrow = length(colnames(forward.glm$model))))
+model.breakdown3 <- model.breakdown3[,-c(1)]
+model.breakdown3$forward.variables <- colnames(forward.glm$model)
+model.breakdown3$forward.weights <- forward.glm$coefficients
+write.csv(model.breakdown3,"ExportedDataFrames\\temp.csv", row.names = FALSE)
+
+model.breakdown4 <- data.frame(matrix(0, nrow = length(colnames(both.glm$model))))
+model.breakdown4 <- model.breakdown4[,-c(1)]
+model.breakdown4$both.variables <- colnames(both.glm$model)
+model.breakdown4$both.weights <- both.glm$coefficients
+write.csv(model.breakdown4,"ExportedDataFrames\\temp.csv", row.names = FALSE)
+
+######################
+# PRedict 2021 stats 
+#####################
+
+data.2021.df <- read.csv("2021.csv")
+
+data.2021.df[is.na(data.2021.df)] <- 0
+
+# create a dataframe where the only predictive value is MVP binary 
+data.2021.df <- data.2021.df[,-c(25:29)]
+test <- c(2021)
+base.2021.df <- logit_predict_separate_years(logit.reg, c(2021), data.2021.df)
+backward.2021.df <- logit_predict_separate_years(back.glm, c(2021), data.2021.df)
+forward.2021.df <- logit_predict_separate_years(forward.glm, c(2021), data.2021.df)
+both.2021.df <- logit_predict_separate_years(both.glm, c(2021), data.2021.df)
+
+
+# output some tables 
+write.csv(winners.readable.df,"ExportedDataFrames\\winners-readable.csv", row.names = FALSE)
